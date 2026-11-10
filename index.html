@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mozaikvilág – közösségi pixelvászon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+ <button class="brand" data-act="home" aria-label="Mozaikvilág – kezdőlap"><span class="logo"><i></i><i></i><i></i><i></i></span>Mozaikvilág</button>
+ <nav class="nav">
+  <button data-act="home">Vászon</button>
+  <button data-act="mine">Képeim</button>
+  <button data-act="how">Hogyan működik?</button>
+ </nav>
+ <div class="sp"></div>
+ <span class="stat" id="stat"></span>
+ <button class="btn" id="authBtn" data-act="auth">Belépés</button>
+ <button class="btn pri" data-act="upload"><span class="hm">+ Kép feltöltése</span><span class="sm">+ Kép</span></button>
+</header>
+
+<main>
+ <canvas id="cv"></canvas>
+ <div class="hud hero"><h1>Egy közös, élő mozaik</h1><p>Foglalj helyet, tölts fel egy képet, és közelíts rá: minden folt mögött valaki áll.</p></div>
+ <div class="hud" id="go">
+  <input id="goIn" class="in" placeholder="Keresés névre…" aria-label="Keresés felhasználónévre" autocomplete="off" spellcheck="false">
+  <div id="sr" role="listbox"></div>
+ </div>
+ <div class="hud" id="pos"><b id="lvl"></b><span id="crd"></span></div>
+ <div class="hud" id="zc"><button id="zi" aria-label="Nagyítás">+</button><button id="zo" aria-label="Kicsinyítés">−</button><button id="zf" aria-label="Teljes mozaik" title="Teljes mozaik">⛶</button></div>
+ <div class="hud" id="info"></div>
+</main>
+
+<nav class="bn">
+ <button data-act="home">Vászon</button><button data-act="upload">Feltöltés</button><button data-act="mine">Képeim</button><button data-act="how">Súgó</button>
+</nav>
+
+<dialog id="dAuth"><div class="dh"><h2>Belépés a vászonra</h2><button class="x" data-close aria-label="Bezár">✕</button></div>
+ <div class="db">
+  <div class="tabs"><button class="on" data-tab="login">Belépés</button><button data-tab="reg">Regisztráció</button></div>
+  <div><label for="aUser">Felhasználónév</label><input id="aUser" class="in" autocomplete="username" maxlength="20"></div>
+  <div><label for="aPass">Jelszó</label><input id="aPass" type="password" class="in" autocomplete="current-password"></div>
+  <div id="aBioW" hidden>
+   <label for="aBio">Leírás magadról <span class="opt">(nem kötelező)</span></label>
+   <textarea id="aBio" class="in" maxlength="400" rows="4" placeholder="Pár mondat arról, ki vagy, és mit csinálsz…"></textarea>
+   <div class="cnt"><span id="aCnt">0</span> / 400</div>
+  </div>
+  <div class="err" id="aErr"></div>
+  <button class="btn pri" id="aGo">Belépés</button>
+  <p class="hint">A regisztráció és a feltöltés jelenleg ingyenes.</p>
+ </div></dialog>
+
+<dialog id="dUp"><div class="dh"><h2>Új kép a vásznon</h2><button class="x" data-close aria-label="Bezár">✕</button></div>
+ <div class="db">
+  <div class="drop" id="drop" tabindex="0" role="button"><strong>Húzd ide a képet</strong>vagy kattints a tallózáshoz (JPG, PNG, WebP, GIF)</div>
+  <input type="file" id="file" accept="image/*" hidden>
+  <div class="pv" id="pv"><canvas id="pvc" width="128" height="128"></canvas><div class="hint" id="pvt"></div></div>
+  <div><label for="szN">Méret a vásznon (1–100 egység)</label>
+   <div class="sz"><input type="range" id="szR" min="1" max="100" value="10" aria-label="Méret csúszka"><input type="number" id="szN" class="in" min="1" max="100" value="10"></div>
+   <p class="hint" id="szH"></p></div>
+  <div class="err" id="uErr"></div>
+  <button class="btn pri" id="uGo">Elhelyezés a vásznon</button>
+ </div></dialog>
+
+<dialog id="dProf"><div class="dh"><h2 id="pN"></h2><button class="x" data-close aria-label="Bezár">✕</button></div><div class="db" id="pB"></div></dialog>
+
+<dialog id="dHow"><div class="dh"><h2>Hogyan működik?</h2><button class="x" data-close aria-label="Bezár">✕</button></div>
+ <div class="db"><ol class="how">
+  <li>Regisztrálj egy névvel és egy rövid leírással, majd tölts fel egy képet (húzd rá az oldalra, vagy válaszd ki).</li>
+  <li>Állítsd be, mekkora helyet foglalj: 1×1-től 100×100 egységig. Később bármikor módosíthatod, szüneteltetheted, kicserélheted vagy törölheted.</li>
+  <li>A képek mindig összeérnek, és minden oldalbetöltéskor új, szabálytalan alakzatot alkotnak.</li>
+  <li>Görgővel vagy két ujjal nagyíthatsz. Messziről színfoltokat látsz, közelről a teljes képet.</li>
+  <li>A kereső segítségével név alapján megkeresheted bárki képét. Kattints egy képre a profil megtekintéséhez.</li>
+ </ol>
+ <p class="hint">Ez egy működő prototípus: a felhasználók és képek ebben a böngészőben tárolódnak (localStorage), a demó képek pedig minden betöltéskor újragenerálódnak. Az éles verzióhoz szerver, adatbázis és képtároló kell.</p></div></dialog>
+
+<input type="file" id="rFile" accept="image/*" hidden>
+<div id="dz">Engedd el a képet a feltöltéshez</div>
+<div id="toast" role="status"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
