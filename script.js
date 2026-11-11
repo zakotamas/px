@@ -1,5 +1,5 @@
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-const W=1e6, ORG=W/2, MAXS=64, BIO_MAX=400, BG='#f3f4f7', ACC='#4338ca';
+const W=1e6, ORG=W/2, MAXS=64, BIO_MAX=400;
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt=n=>n.toLocaleString('hu-HU');
 const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -104,6 +104,33 @@ function finish(b,src){
 const cv=$('#cv'),ctx=cv.getContext('2d');
 let vw=0,vh=0,dpr=1,dirty=1,sel=null,hover=null;
 const cam={x:ORG,y:ORG,s:1};
+
+/* ---------- Világos / sötét téma ---------- */
+let BG='#f3f4f7',ACC='#4338ca',TH={};
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function readTheme(){ // a vászon színeit a CSS-változókból olvassuk, így mindig egyeznek az oldallal
+ BG=cssv('--cv-bg')||BG;ACC=cssv('--acc')||ACC;
+ TH={grid:cssv('--cv-grid'),hov:cssv('--cv-hover'),pause:cssv('--cv-pause'),pauseInk:cssv('--cv-pause-ink'),ph:cssv('--cv-ph')};
+}
+const themeBtn=$('#themeBtn');
+const curTheme=()=>document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+function applyTheme(t,persist){
+ document.documentElement.setAttribute('data-theme',t);
+ if(persist){try{localStorage.setItem('mv_theme',t)}catch{}}
+ readTheme();
+ const tc=$('#tc');if(tc)tc.setAttribute('content',cssv('--bg'));
+ const dark=t==='dark';
+ themeBtn.setAttribute('aria-pressed',dark);
+ themeBtn.setAttribute('aria-label',dark?'Váltás világos módra':'Váltás sötét módra');
+ themeBtn.title=dark?'Világos mód':'Sötét mód';
+ dirty=1;
+}
+themeBtn.onclick=()=>applyTheme(curTheme()==='dark'?'light':'dark',true);
+(function(){ // ha a felhasználó még nem választott, a rendszer beállítását követjük
+ const mq=window.matchMedia&&matchMedia('(prefers-color-scheme: dark)');
+ if(mq&&mq.addEventListener)mq.addEventListener('change',e=>{let t=null;try{t=localStorage.getItem('mv_theme')}catch{}if(t!=='dark'&&t!=='light')applyTheme(e.matches?'dark':'light',false)});
+})();
+applyTheme(curTheme(),false);
 const fit=()=>Math.min(vw/((B.x1-B.x0)*1.12),vh/((B.y1-B.y0)*1.2))||1;
 const minS=()=>fit()*.5;
 function resize(){dpr=window.devicePixelRatio||1;const r=cv.getBoundingClientRect();vw=r.width;vh=r.height;cv.width=vw*dpr;cv.height=vh*dpr;clamp();dirty=1}
@@ -129,7 +156,7 @@ function zoomAt(f,px=vw/2,py=vh/2){
 function draw(){
  const s=cam.s,z=s/fit();ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle=BG;ctx.fillRect(0,0,vw,vh);
  if(s>10){ // finom egységrács
-  ctx.strokeStyle='rgba(20,22,35,.05)';ctx.lineWidth=1;ctx.beginPath();
+  ctx.strokeStyle=TH.grid;ctx.lineWidth=1;ctx.beginPath();
   const [x0,y0]=s2w(0,0),[x1,y1]=s2w(vw,vh);
   for(let x=Math.floor(x0);x<=x1;x++){const p=Math.round((x-cam.x)*s+vw/2)+.5;ctx.moveTo(p,0);ctx.lineTo(p,vh)}
   for(let y=Math.floor(y0);y<=y1;y++){const p=Math.round((y-cam.y)*s+vh/2)+.5;ctx.moveTo(0,p);ctx.lineTo(vw,p)}
@@ -141,11 +168,11 @@ function draw(){
   const sx=(it.x-cam.x)*s+vw/2,sy=(it.y-cam.y)*s+vh/2,d=it.size*s;
   if(sx>vw||sy>vh||sx+d<0||sy+d<0)continue;
   const dd=Math.max(d,2);
-  if(it.paused){ctx.fillStyle='#cdd1dd';ctx.fillRect(sx,sy,dd,dd);
-   if(d>40){ctx.fillStyle='#6b7182';ctx.font='700 '+Math.min(d/6,22)+'px Manrope,sans-serif';ctx.textAlign='center';ctx.fillText('szünetel',sx+d/2,sy+d/2+4)}}
+  if(it.paused){ctx.fillStyle=TH.pause;ctx.fillRect(sx,sy,dd,dd);
+   if(d>40){ctx.fillStyle=TH.pauseInk;ctx.font='700 '+Math.min(d/6,22)+'px Manrope,sans-serif';ctx.textAlign='center';ctx.fillText('szünetel',sx+d/2,sy+d/2+4)}}
   else{
    const b=bitmap(it);
-   if(!b){ctx.fillStyle='#d5d9e4';ctx.fillRect(sx,sy,dd,dd)}
+   if(!b){ctx.fillStyle=TH.ph;ctx.fillRect(sx,sy,dd,dd)}
    else if(d<3){ctx.fillStyle=b.col;ctx.fillRect(sx,sy,dd,dd)}                          // 1. szint: színfolt
    else ctx.drawImage(d<14?b.m8:d<60?b.m32:b.full,sx,sy,d,d);                           // 2–3. szint
   }
@@ -157,7 +184,7 @@ function draw(){
   ctx.strokeStyle=BG;ctx.lineWidth=Math.min(2,Math.max(.8,Math.sqrt(s)*.35));ctx.stroke();
  }
  if(mine.length){ctx.beginPath();for(let i=0;i<mine.length;i+=3)ctx.rect(mine[i]+1,mine[i+1]+1,mine[i+2]-2,mine[i+2]-2);ctx.strokeStyle=ACC;ctx.lineWidth=1.5;ctx.stroke()}
- for(const [it,c,w] of [[hover,'rgba(20,22,35,.85)',1.5],[sel,ACC,3]]){
+ for(const [it,c,w] of [[hover,TH.hov,1.5],[sel,ACC,3]]){
   if(!it)continue;const [sx,sy]=w2s(it.x,it.y),d=Math.max(it.size*s,6);
   ctx.strokeStyle=c;ctx.lineWidth=w;ctx.strokeRect(sx,sy,d,d);
  }
@@ -368,6 +395,10 @@ $$('[data-act]').forEach(b=>b.onclick=()=>{
 });
 $$('dialog').forEach(d=>{d.addEventListener('click',e=>{if(e.target===d||e.target.closest('[data-close]'))d.close()})});
 function toast(t){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>el.classList.remove('on'),2800)}
-function stats(){const px=S.items.reduce((a,i)=>a+i.size*i.size,0);$('#stat').textContent=`${fmt(S.items.length)} kép · ${fmt(px)} foglalt pixel`}
+function stats(){
+ const px=S.items.reduce((a,i)=>a+i.size*i.size,0),n=S.items.length;
+ $('#stat').textContent=`${fmt(n)} kép · ${fmt(px)} foglalt pixel`;               // nagy kijelzőn a fejlécben
+ $('#mstat').innerHTML=`<span><b>${fmt(n)}</b> kép</span><span><b>${fmt(px)}</b> foglalt pixel</span>`; // mobilon a keresőkártyában
+}
 
 layout();setMe(me);stats();resize();home(false);
